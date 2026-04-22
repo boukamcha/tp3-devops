@@ -1,0 +1,40 @@
+name: 'Terraform CI/CD Pipeline'
+
+# Ce pipeline se déclenche automatiquement à chaque "push" sur la branche "main"
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    name: 'Terraform Deployment'
+    # Le robot GitHub va utiliser une machine virtuelle Linux (Ubuntu) fraîche
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Le robot clone votre code depuis votre dépôt GitHub
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # 2. Setup Terraform : Le robot installe l'outil Terraform sur sa machine
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ">= 1.0.0"
+
+    # 3. Init : Initialisation de l'état et téléchargement du provider Docker
+    - name: Terraform Init
+      run: terraform init
+
+    # 4. Plan : Validation et détection des changements
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan
+      continue-on-error: false # Si le plan échoue, on arrête tout immédiatement
+
+    # 5. Apply : Déploiement Continu. 
+    # Cette étape ne s'exécute QUE si la modification concerne la branche main.
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply -auto-approve
